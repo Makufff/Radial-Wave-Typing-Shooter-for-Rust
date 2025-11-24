@@ -3,8 +3,17 @@ use bevy::prelude::*;
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
 pub enum GameState {
     #[default]
+    Menu,
+    DifficultySelect,
     Running,
     GameOver,
+}
+
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Difficulty {
+    #[default]
+    Easy,
+    Hard,
 }
 
 #[derive(Resource)]
@@ -45,5 +54,26 @@ impl Default for WordList {
             "type".to_string(), "fast".to_string(), "ship".to_string(), "wave".to_string(),
             "grid".to_string(), "neon".to_string(), "laser".to_string(), "blade".to_string(),
         ])
+    }
+}
+
+impl WordList {
+    pub fn get_word(&self, difficulty: Difficulty) -> String {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let base_word = &self.0[rng.gen_range(0..self.0.len())];
+        
+        match difficulty {
+            Difficulty::Easy => base_word.to_lowercase(),
+            Difficulty::Hard => {
+                base_word.chars().map(|c| {
+                    if rng.gen_bool(0.5) {
+                        c.to_uppercase().next().unwrap()
+                    } else {
+                        c
+                    }
+                }).collect()
+            }
+        }
     }
 }

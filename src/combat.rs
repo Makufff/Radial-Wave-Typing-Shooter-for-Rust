@@ -6,7 +6,12 @@ pub struct CombatPlugin;
 
 impl Plugin for CombatPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (typing_system, weapon_switching, collision_system, draw_combat_effects));
+        app.add_systems(Update, (
+            weapon_switching,
+            typing_system,
+            collision_system,
+            draw_combat_effects,
+        ).run_if(in_state(crate::resources::GameState::Running)));
     }
 }
 
@@ -87,6 +92,7 @@ fn typing_system(
     mut text_transform_query: Query<&mut Transform, (With<Text2d>, Without<Enemy>, Without<Player>)>,
     mut player_query: Query<(Entity, &mut Ship, &mut Transform), (With<Player>, Without<Enemy>, Without<Text2d>)>,
     mut typing_buffer: ResMut<crate::ui::TypingBuffer>,
+    difficulty: Res<crate::resources::Difficulty>,
 ) {
     let (_player_entity, mut ship, mut player_transform) = player_query.single_mut();
 
@@ -96,7 +102,7 @@ fn typing_system(
         }
         
         if let Key::Space = ev.logical_key {
-            let typed_word = typing_buffer.text.trim().to_lowercase();
+            let typed_word = typing_buffer.text.trim();
             
             if typed_word.is_empty() {
                 continue;
@@ -106,7 +112,16 @@ fn typing_system(
             let mut actions = Vec::new();
 
             for (entity, word, children, enemy_transform) in enemy_query.iter_mut() {
-                if word.text.to_lowercase() == typed_word {
+                let matches = match *difficulty {
+                    crate::resources::Difficulty::Easy => {
+                        word.text.to_lowercase() == typed_word.to_lowercase()
+                    }
+                    crate::resources::Difficulty::Hard => {
+                        word.text == typed_word
+                    }
+                };
+                
+                if matches {
                     hit_any = true;
                     let children_vec: Vec<Entity> = children.iter().copied().collect();
                     let enemy_pos = enemy_transform.translation;

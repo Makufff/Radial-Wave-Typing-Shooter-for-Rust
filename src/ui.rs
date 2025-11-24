@@ -6,7 +6,7 @@ pub struct GameUiPlugin;
 impl Plugin for GameUiPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, (setup_background, setup_ui))
-           .add_systems(Update, (animate_background, update_ui, update_typing_input))
+           .add_systems(Update, (animate_background, update_ui, update_typing_input).run_if(in_state(crate::resources::GameState::Running)))
            .init_resource::<TypingBuffer>();
     }
 }
@@ -233,7 +233,11 @@ fn update_typing_input(
         
         match &ev.logical_key {
             Key::Character(s) => {
-                typing_buffer.text.push_str(&s.to_lowercase());
+                for c in s.chars() {
+                    if c.is_ascii_alphabetic() {
+                        typing_buffer.text.push(c);
+                    }
+                }
             }
             Key::Backspace => {
                 typing_buffer.text.pop();

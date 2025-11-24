@@ -9,7 +9,7 @@ impl Plugin for EnemyPlugin {
         app.insert_resource(SpawnTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
            .init_resource::<WordList>()
            .init_resource::<Wave>()
-           .add_systems(Update, (spawn_enemies, enemy_movement, wave_progression, text_scale_recovery));
+           .add_systems(Update, (spawn_enemies, enemy_movement, wave_progression, text_scale_recovery).run_if(in_state(crate::resources::GameState::Running)));
     }
 }
 
@@ -35,6 +35,7 @@ fn spawn_enemies(
     mut materials: ResMut<Assets<ColorMaterial>>,
     word_list: Res<WordList>,
     mut wave: ResMut<Wave>,
+    difficulty: Res<crate::resources::Difficulty>,
 ) {
     if wave.enemies_remaining > 0 {
         if timer.0.tick(time.delta()).just_finished() {
@@ -44,7 +45,7 @@ fn spawn_enemies(
             let x = radius * angle.cos();
             let y = radius * angle.sin();
 
-            let word_str = &word_list.0[rng.gen_range(0..word_list.0.len())];
+            let word_str = word_list.get_word(*difficulty);
 
             commands.spawn((
                 Mesh2d(meshes.add(Triangle2d::default())),
