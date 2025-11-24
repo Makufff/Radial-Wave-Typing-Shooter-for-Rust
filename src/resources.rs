@@ -6,6 +6,7 @@ pub enum GameState {
     Menu,
     DifficultySelect,
     Running,
+    Paused,
     GameOver,
 }
 

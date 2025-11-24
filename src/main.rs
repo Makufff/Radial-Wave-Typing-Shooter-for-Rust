@@ -8,6 +8,7 @@ mod resources;
 mod background;
 mod game_over;
 mod menu;
+mod pause;
 
 use player::PlayerPlugin;
 use enemy::EnemyPlugin;
@@ -19,7 +20,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_state::<GameState>()
-        .add_plugins((PlayerPlugin, EnemyPlugin, CombatPlugin, GameUiPlugin, crate::background::BackgroundPlugin, crate::game_over::GameOverPlugin, crate::menu::MenuPlugin))
+        .add_plugins((PlayerPlugin, EnemyPlugin, CombatPlugin, GameUiPlugin, crate::background::BackgroundPlugin, crate::game_over::GameOverPlugin, crate::menu::MenuPlugin, crate::pause::PausePlugin))
         .add_systems(Startup, setup_camera)
         .run();
 }
