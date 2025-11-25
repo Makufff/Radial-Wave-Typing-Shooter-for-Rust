@@ -24,6 +24,12 @@ pub struct Word {
     pub typed_index: usize,
 }
 
+#[derive(Component)]
+pub struct Health {
+    pub current: i32,
+    pub max: i32,
+}
+
 #[derive(Resource)]
 struct SpawnTimer(Timer);
 
@@ -55,6 +61,10 @@ fn spawn_enemies(
                 Word {
                     text: word_str.clone(),
                     typed_index: 0,
+                },
+                Health {
+                    current: 2,
+                    max: 2,
                 },
             )).with_children(|parent| {
                 parent.spawn((

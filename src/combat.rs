@@ -87,7 +87,7 @@ fn draw_combat_effects(
 fn typing_system(
     mut commands: Commands,
     mut key_evr: EventReader<KeyboardInput>,
-    mut enemy_query: Query<(Entity, &mut Word, &Children, &Transform), With<Enemy>>,
+    mut enemy_query: Query<(Entity, &mut Word, &mut crate::enemy::Health, &Children, &Transform), With<Enemy>>,
     mut text_color_query: Query<&mut TextColor>,
     mut text_transform_query: Query<&mut Transform, (With<Text2d>, Without<Enemy>, Without<Player>)>,
     mut player_query: Query<(Entity, &mut Ship, &mut Transform), (With<Player>, Without<Enemy>, Without<Text2d>)>,
@@ -111,7 +111,7 @@ fn typing_system(
             let mut hit_any = false;
             let mut actions = Vec::new();
 
-            for (entity, word, children, enemy_transform) in enemy_query.iter_mut() {
+            for (entity, word, health, children, enemy_transform) in enemy_query.iter_mut() {
                 let matches = match *difficulty {
                     crate::resources::Difficulty::Easy => {
                         word.text.to_lowercase() == typed_word.to_lowercase()
@@ -125,27 +125,28 @@ fn typing_system(
                     hit_any = true;
                     let children_vec: Vec<Entity> = children.iter().copied().collect();
                     let enemy_pos = enemy_transform.translation;
+                    let current_health = health.current;
                     
-                    actions.push((entity, children_vec, enemy_pos, ship.current_weapon));
+                    actions.push((entity, children_vec, enemy_pos, ship.current_weapon, current_health));
                     break;
                 }
             }
             
-            for (entity, children_vec, enemy_pos, weapon) in actions {
-                for &child in children_vec.iter() {
-                    if let Ok(mut text_color) = text_color_query.get_mut(child) {
-                        text_color.0 = Color::srgb(0.0, 1.0, 0.0);
-                    }
-                    if let Ok(mut text_transform) = text_transform_query.get_mut(child) {
-                        text_transform.scale = Vec3::splat(0.08);
-                    }
-                }
-                
-                ship.score += 100 * (ship.combo + 1);
-                ship.combo += 1;
-                
+            for (entity, children_vec, enemy_pos, weapon, current_health) in actions {
                 match weapon {
                     Weapon::Blade => {
+                        // Blade kills instantly
+                        for &child in children_vec.iter() {
+                            if let Ok(mut text_color) = text_color_query.get_mut(child) {
+                                text_color.0 = Color::srgb(0.0, 1.0, 0.0);
+                            }
+                            if let Ok(mut text_transform) = text_transform_query.get_mut(child) {
+                                text_transform.scale = Vec3::splat(0.08);
+                            }
+                        }
+                        
+                        ship.score += 100 * (ship.combo + 1);
+                        ship.combo += 1;
                         player_transform.translation = enemy_pos;
                         println!("Blade Slide Kill!");
                         commands.entity(entity).despawn_recursive();
@@ -156,8 +157,39 @@ fn typing_system(
                             end: enemy_pos,
                             timer: Timer::from_seconds(0.2, TimerMode::Once),
                         });
-                        println!("Laser Shot!");
-                        commands.entity(entity).despawn_recursive();
+                        
+                        // Get mutable health reference
+                        if let Ok((_, _, mut health, _, _)) = enemy_query.get_mut(entity) {
+                            health.current -= 1;
+                            
+                            if health.current <= 0 {
+                                // Enemy destroyed
+                                for &child in children_vec.iter() {
+                                    if let Ok(mut text_color) = text_color_query.get_mut(child) {
+                                        text_color.0 = Color::srgb(0.0, 1.0, 0.0);
+                                    }
+                                    if let Ok(mut text_transform) = text_transform_query.get_mut(child) {
+                                        text_transform.scale = Vec3::splat(0.08);
+                                    }
+                                }
+                                
+                                ship.score += 100 * (ship.combo + 1);
+                                ship.combo += 1;
+                                println!("Laser Kill!");
+                                commands.entity(entity).despawn_recursive();
+                            } else {
+                                // Enemy damaged but not destroyed
+                                for &child in children_vec.iter() {
+                                    if let Ok(mut text_color) = text_color_query.get_mut(child) {
+                                        text_color.0 = Color::srgb(1.0, 1.0, 0.0); // Yellow for damaged
+                                    }
+                                    if let Ok(mut text_transform) = text_transform_query.get_mut(child) {
+                                        text_transform.scale = Vec3::splat(0.06);
+                                    }
+                                }
+                                println!("Laser Hit! Enemy HP: {}", health.current);
+                            }
+                        }
                     }
                 }
             }
