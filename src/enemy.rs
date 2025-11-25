@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 use rand::Rng;
-use crate::resources::{WordList, Wave};
+use crate::resources::{ContentManager, Wave};
 
 pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(SpawnTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
-           .init_resource::<WordList>()
+           .init_resource::<ContentManager>()
            .init_resource::<Wave>()
            .add_systems(Update, (spawn_enemies, enemy_movement, wave_progression, text_scale_recovery).run_if(in_state(crate::resources::GameState::Running)));
     }
@@ -30,6 +30,9 @@ pub struct Health {
     pub max: i32,
 }
 
+#[derive(Component)]
+pub struct EnemyText;
+
 #[derive(Resource)]
 struct SpawnTimer(Timer);
 
@@ -39,10 +42,21 @@ fn spawn_enemies(
     mut timer: ResMut<SpawnTimer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    word_list: Res<WordList>,
+    mut content_manager: ResMut<ContentManager>,
     mut wave: ResMut<Wave>,
     difficulty: Res<crate::resources::Difficulty>,
+    boss_query: Query<Entity, With<crate::boss::Boss>>,
+    mut next_state: ResMut<NextState<crate::resources::GameState>>,
 ) {
+    if wave.current % 10 == 0 && wave.enemies_remaining > 0 {
+        if boss_query.is_empty() {
+            println!("Boss Wave {}! Entering warning screen...", wave.current);
+            wave.enemies_remaining = 0;
+            next_state.set(crate::resources::GameState::BossWarning);
+        }
+        return;
+    }
+    
     if wave.enemies_remaining > 0 {
         if timer.0.tick(time.delta()).just_finished() {
             let mut rng = rand::thread_rng();
@@ -51,12 +65,12 @@ fn spawn_enemies(
             let x = radius * angle.cos();
             let y = radius * angle.sin();
 
-            let word_str = word_list.get_word(*difficulty);
+            let word_str = content_manager.get_word(*difficulty);
 
             commands.spawn((
                 Mesh2d(meshes.add(Triangle2d::default())),
                 MeshMaterial2d(materials.add(Color::srgb(1.0, 0.0, 0.0))),
-                Transform::from_xyz(x, y, 0.0).with_scale(Vec3::splat(20.0)),
+                Transform::from_xyz(x, y, 10.0).with_scale(Vec3::splat(20.0)),
                 Enemy { speed: 100.0 },
                 Word {
                     text: word_str.clone(),
@@ -75,6 +89,7 @@ fn spawn_enemies(
                     },
                     TextColor(Color::WHITE),
                     Transform::from_xyz(0.0, 1.5, 1.0),
+                    EnemyText,
                 ));
             });
             
@@ -86,8 +101,9 @@ fn spawn_enemies(
 fn wave_progression(
     mut wave: ResMut<Wave>,
     enemy_query: Query<Entity, With<Enemy>>,
+    boss_query: Query<Entity, With<crate::boss::Boss>>,
 ) {
-    if wave.enemies_remaining == 0 && enemy_query.is_empty() {
+    if wave.enemies_remaining == 0 && enemy_query.is_empty() && boss_query.is_empty() {
         wave.current += 1;
         wave.enemies_remaining = wave.get_enemy_count();
         println!("Wave {} Started! Enemies: {}", wave.current, wave.enemies_remaining);
@@ -127,7 +143,7 @@ fn enemy_movement(
 
 fn text_scale_recovery(
     time: Res<Time>,
-    mut query: Query<&mut Transform, (With<Text2d>, Without<Enemy>)>,
+    mut query: Query<&mut Transform, With<EnemyText>>,
 ) {
     for mut transform in query.iter_mut() {
         let base_scale = Vec3::splat(0.05);

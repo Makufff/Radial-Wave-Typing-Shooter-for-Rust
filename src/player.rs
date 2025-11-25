@@ -47,7 +47,7 @@ fn spawn_player(
     commands.spawn((
         Mesh2d(meshes.add(Triangle2d::default())),
         MeshMaterial2d(materials.add(Color::srgb(0.0, 0.0, 1.0))),
-        Transform::default().with_scale(Vec3::splat(30.0)),
+        Transform::from_xyz(0.0, 0.0, 10.0).with_scale(Vec3::splat(30.0)),
         Player,
         Ship::default(),
     ));
@@ -86,6 +86,7 @@ fn player_movement(
     } else {
         transform.scale = Vec3::splat(30.0);
     }
+    transform.translation.z = 10.0;
 }
 
 fn update_invulnerability(

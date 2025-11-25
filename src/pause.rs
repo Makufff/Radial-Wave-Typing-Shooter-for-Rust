@@ -32,7 +32,6 @@ fn resume_input(
     if keyboard_input.just_pressed(KeyCode::Escape) {
         next_state.set(GameState::Running);
     } else if keyboard_input.just_pressed(KeyCode::KeyQ) {
-        // Mark that the next time we start the game from the menu it should be a fresh init
         if let Some(mut flag) = should_reset {
             flag.0 = true;
         }

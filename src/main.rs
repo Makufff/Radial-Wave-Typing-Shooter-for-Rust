@@ -10,18 +10,20 @@ mod game_over;
 mod menu;
 mod pause;
 mod particles;
+mod boss;
 
 use player::PlayerPlugin;
 use enemy::EnemyPlugin;
 use combat::CombatPlugin;
 use ui::GameUiPlugin;
 use resources::GameState;
+use boss::BossPlugin;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_state::<GameState>()
-        .add_plugins((PlayerPlugin, EnemyPlugin, CombatPlugin, GameUiPlugin, crate::background::BackgroundPlugin, crate::game_over::GameOverPlugin, crate::menu::MenuPlugin, crate::pause::PausePlugin, crate::particles::ParticlePlugin))
+        .add_plugins((PlayerPlugin, EnemyPlugin, CombatPlugin, GameUiPlugin, BossPlugin, crate::background::BackgroundPlugin, crate::game_over::GameOverPlugin, crate::menu::MenuPlugin, crate::pause::PausePlugin, crate::particles::ParticlePlugin))
         .add_systems(Startup, setup_camera)
         .run();
 }

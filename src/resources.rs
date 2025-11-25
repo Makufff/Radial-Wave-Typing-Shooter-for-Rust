@@ -7,6 +7,7 @@ pub enum GameState {
     Settings,
     DifficultySelect,
     Running,
+    BossWarning,
     Paused,
     GameOver,
 }
@@ -63,7 +64,16 @@ impl MenuSelection {
 }
 
 #[derive(Resource)]
-pub struct WordList(pub Vec<String>);
+pub struct ParagraphContent {
+    pub lines: Vec<String>,
+    pub unique_words: Vec<String>,
+}
+
+#[derive(Resource)]
+pub struct ContentManager {
+    pub paragraphs: Vec<ParagraphContent>,
+    pub current_index: usize,
+}
 
 #[derive(Resource, Default, Debug)]
 pub struct ShouldResetOnStart(pub bool);
@@ -96,21 +106,98 @@ impl Wave {
     }
 }
 
-impl Default for WordList {
+impl Default for ContentManager {
     fn default() -> Self {
-        Self(vec![
-            "rust".to_string(), "bevy".to_string(), "game".to_string(), "code".to_string(),
-            "type".to_string(), "fast".to_string(), "ship".to_string(), "wave".to_string(),
-            "grid".to_string(), "neon".to_string(), "laser".to_string(), "blade".to_string(),
-        ])
+        Self::load_from_files()
     }
 }
 
-impl WordList {
+impl ContentManager {
+    pub fn load_from_files() -> Self {
+        use std::fs;
+        use std::collections::HashSet;
+        
+        let mut paragraphs = Vec::new();
+        
+        let content_dir = "content";
+        if let Ok(entries) = fs::read_dir(content_dir) {
+            for entry in entries.flatten() {
+                if let Ok(content) = fs::read_to_string(entry.path()) {
+                    let lines: Vec<String> = content
+                        .lines()
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    
+                    let mut word_set = HashSet::new();
+                    for line in &lines {
+                        for word in line.split_whitespace() {
+                            let clean_word: String = word
+                                .chars()
+                                .filter(|c| c.is_alphanumeric())
+                                .collect();
+                            if !clean_word.is_empty() {
+                                word_set.insert(clean_word);
+                            }
+                        }
+                    }
+                    
+                    let unique_words: Vec<String> = word_set.into_iter().collect();
+                    
+                    paragraphs.push(ParagraphContent {
+                        lines,
+                        unique_words,
+                    });
+                }
+            }
+        }
+        
+        if paragraphs.is_empty() {
+            println!("Warning: No content files found, using default content");
+            let default_lines = vec![
+                "The quick brown fox jumps over the lazy dog".to_string(),
+                "Programming in Rust is fun and safe".to_string(),
+                "Bevy makes game development easy".to_string(),
+            ];
+            
+            let mut word_set = HashSet::new();
+            for line in &default_lines {
+                for word in line.split_whitespace() {
+                    let clean_word: String = word.chars().filter(|c| c.is_alphanumeric()).collect();
+                    if !clean_word.is_empty() {
+                        word_set.insert(clean_word);
+                    }
+                }
+            }
+            
+            paragraphs.push(ParagraphContent {
+                lines: default_lines,
+                unique_words: word_set.into_iter().collect(),
+            });
+        }
+        
+        println!("Loaded {} paragraphs", paragraphs.len());
+        
+        Self {
+            paragraphs,
+            current_index: 0,
+        }
+    }
+    
     pub fn get_word(&self, difficulty: Difficulty) -> String {
         use rand::Rng;
         let mut rng = rand::thread_rng();
-        let base_word = &self.0[rng.gen_range(0..self.0.len())];
+        
+        if self.paragraphs.is_empty() {
+            return "error".to_string();
+        }
+        
+        let current_paragraph = &self.paragraphs[self.current_index];
+        if current_paragraph.unique_words.is_empty() {
+            return "empty".to_string();
+        }
+        
+        let base_word = &current_paragraph.unique_words[rng.gen_range(0..current_paragraph.unique_words.len())];
         
         match difficulty {
             Difficulty::Easy => base_word.to_lowercase(),
@@ -124,5 +211,18 @@ impl WordList {
                 }).collect()
             }
         }
+    }
+    
+    pub fn get_current_lines(&self) -> Vec<String> {
+        if self.paragraphs.is_empty() {
+            return vec!["No content loaded".to_string()];
+        }
+        
+        self.paragraphs[self.current_index].lines.clone()
+    }
+    
+    pub fn next_paragraph(&mut self) {
+        self.current_index = (self.current_index + 1) % self.paragraphs.len();
+        println!("Switched to paragraph {}", self.current_index + 1);
     }
 }

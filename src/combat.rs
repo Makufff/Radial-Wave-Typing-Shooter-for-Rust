@@ -47,7 +47,12 @@ fn typing_system(
     mut player_query: Query<(Entity, &mut Ship, &mut Transform), (With<Player>, Without<Enemy>, Without<Text2d>)>,
     mut typing_buffer: ResMut<crate::ui::TypingBuffer>,
     difficulty: Res<crate::resources::Difficulty>,
+    boss_query: Query<Entity, With<crate::boss::Boss>>,
 ) {
+    if !boss_query.is_empty() {
+        return;
+    }
+    
     let (_player_entity, mut ship, mut player_transform) = player_query.single_mut();
 
     for ev in key_evr.read() {
@@ -55,7 +60,7 @@ fn typing_system(
             continue;
         }
         
-        if let Key::Enter | Key::Space = ev.logical_key {
+        if let Key::Enter = ev.logical_key {
             let typed_word = typing_buffer.text.trim();
             
             if typed_word.is_empty() {
@@ -89,7 +94,6 @@ fn typing_system(
             for (entity, children_vec, enemy_pos, weapon, current_health) in actions {
                 match weapon {
                     Weapon::Blade => {
-                        // Blade kills instantly
                         for &child in children_vec.iter() {
                             if let Ok(mut text_color) = text_color_query.get_mut(child) {
                                 text_color.0 = Color::srgb(0.0, 1.0, 0.0);
@@ -99,30 +103,26 @@ fn typing_system(
                             }
                         }
                         
-                        ship.score += 100 * (ship.combo + 1);
+                        let word_len = typing_buffer.text.trim().len() as u32;
+                        ship.score += word_len * 100 * (ship.combo + 1);
                         ship.combo += 1;
                         
-                        // Spawn blade trail particles
                         let start_pos = player_transform.translation;
                         spawn_blade_trail(&mut commands, start_pos, enemy_pos);
                         
                         player_transform.translation = enemy_pos;
-                        // Grant invulnerability to prevent collision damage during warp
                         ship.invulnerability_timer = Timer::from_seconds(0.15, TimerMode::Once);
                         
-                        // Spawn explosion particles at enemy position
                         spawn_explosion(&mut commands, enemy_pos, Color::srgb(0.0, 1.0, 0.5), 20);
                         
                         println!("Blade Slide Kill!");
                         commands.entity(entity).despawn_recursive();
                     }
                     Weapon::Laser => {
-                        // Get mutable health reference
                         if let Ok((_, _, mut health, _, _)) = enemy_query.get_mut(entity) {
                             health.current -= 1;
                             
                             if health.current <= 0 {
-                                // Enemy destroyed
                                 for &child in children_vec.iter() {
                                     if let Ok(mut text_color) = text_color_query.get_mut(child) {
                                         text_color.0 = Color::srgb(0.0, 1.0, 0.0);
@@ -132,28 +132,25 @@ fn typing_system(
                                     }
                                 }
                                 
-                                ship.score += 100 * (ship.combo + 1);
+                                let word_len = typing_buffer.text.trim().len() as u32;
+                                ship.score += word_len * 100 * (ship.combo + 1);
                                 ship.combo += 1;
-                                // Grant brief invulnerability after kill
                                 ship.invulnerability_timer = Timer::from_seconds(0.15, TimerMode::Once);
                                 
-                                // Spawn explosion particles
                                 spawn_explosion(&mut commands, enemy_pos, Color::srgb(0.0, 0.8, 1.0), 15);
                                 
                                 println!("Laser Kill!");
                                 commands.entity(entity).despawn_recursive();
                             } else {
-                                // Enemy damaged but not destroyed
                                 for &child in children_vec.iter() {
                                     if let Ok(mut text_color) = text_color_query.get_mut(child) {
-                                        text_color.0 = Color::srgb(1.0, 1.0, 0.0); // Yellow for damaged
+                                        text_color.0 = Color::srgb(1.0, 1.0, 0.0);
                                     }
                                     if let Ok(mut text_transform) = text_transform_query.get_mut(child) {
                                         text_transform.scale = Vec3::splat(0.06);
                                     }
                                 }
                                 
-                                // Spawn laser hit particles
                                 spawn_laser_hit(&mut commands, enemy_pos);
                                 
                                 println!("Laser Hit! Enemy HP: {}", health.current);
@@ -172,7 +169,6 @@ fn typing_system(
                         println!("Blade Parry!");
                     }
                     Weapon::Laser => {
-                        // Spawn error particles
                         spawn_error_particles(&mut commands, player_transform.translation);
                         println!("Laser Explode!");
                     }
@@ -191,7 +187,6 @@ fn collision_system(
     mut next_state: ResMut<NextState<crate::resources::GameState>>,
 ) {
     if let Ok((mut ship, player_transform)) = player_query.get_single_mut() {
-        // Skip collision damage if player is invulnerable
         if !ship.invulnerability_timer.finished() {
             return;
         }
@@ -202,7 +197,6 @@ fn collision_system(
                 ship.hp -= 1;
                 ship.combo = 0;
                 
-                // Spawn collision explosion particles
                 spawn_explosion(&mut commands, enemy_transform.translation, Color::srgb(1.0, 0.3, 0.0), 12);
                 
                 println!("Player Hit! HP: {}", ship.hp);

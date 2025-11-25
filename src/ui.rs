@@ -136,8 +136,8 @@ fn setup_ui(mut commands: Commands) {
         Node {
             position_type: PositionType::Absolute,
             bottom: Val::Px(50.0),
-            left: Val::Percent(50.0),
-            width: Val::Px(400.0),
+            left: Val::Percent(10.0),
+            width: Val::Percent(80.0),
             height: Val::Px(60.0),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
@@ -194,7 +194,7 @@ fn setup_background(
             commands.spawn((
                 Mesh2d(meshes.add(Circle::new(2.0))),
                 MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 1.0))),
-                Transform::from_xyz(x, y, -10.0),
+                Transform::from_xyz(x, y, -10.0), // z=-10 (between lines and entities)
                 GridPoint { original_pos: Vec3::new(x, y, -10.0) },
             ));
         }
@@ -234,11 +234,16 @@ fn update_typing_input(
         match &ev.logical_key {
             Key::Character(s) => {
                 for c in s.chars() {
-                    if c.is_ascii_alphabetic() {
+                    // Allow all characters that are not control characters
+                    if !c.is_control() {
                         typing_buffer.text.push(c);
                     }
                 }
             }
+            Key::Space => {
+                typing_buffer.text.push(' ');
+            }
+            
             Key::Backspace => {
                 typing_buffer.text.pop();
             }

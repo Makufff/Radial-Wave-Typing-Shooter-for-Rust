@@ -51,7 +51,6 @@ fn setup_main_menu(mut commands: Commands) {
         BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.9)),
         MainMenuUi,
     )).with_children(|parent| {
-        // Title
         parent.spawn((
             Text::new("RADIAL WAVE TYPING SHOOTER"),
             TextFont {
@@ -65,7 +64,6 @@ fn setup_main_menu(mut commands: Commands) {
             },
         ));
         
-        // Play Button
         parent.spawn((
             MenuItem { index: 0 },
             Node {
@@ -88,7 +86,6 @@ fn setup_main_menu(mut commands: Commands) {
             ));
         });
         
-        // Settings Button
         parent.spawn((
             MenuItem { index: 1 },
             Node {
@@ -111,7 +108,6 @@ fn setup_main_menu(mut commands: Commands) {
             ));
         });
         
-        // Instructions
         parent.spawn((
             Text::new("Use Arrow Keys to Select\nPress SPACE or ENTER to Confirm"),
             TextFont {
@@ -144,15 +140,14 @@ fn main_menu_input(
     }
     
     if selection_changed {
-        // Update visual highlighting
         for (item, mut bg_color) in menu_items.iter_mut() {
             if item.index == menu_selection.selected_index {
-                *bg_color = BackgroundColor(Color::srgb(0.0, 0.8, 1.0)); // Highlighted
+                *bg_color = BackgroundColor(Color::srgb(0.0, 0.8, 1.0));
             } else {
                 if item.index == 0 {
-                    *bg_color = BackgroundColor(Color::srgb(0.4, 0.4, 0.5)); // Play button normal
+                    *bg_color = BackgroundColor(Color::srgb(0.4, 0.4, 0.5));
                 } else {
-                    *bg_color = BackgroundColor(Color::srgb(0.4, 0.4, 0.5)); // Settings button normal
+                    *bg_color = BackgroundColor(Color::srgb(0.4, 0.4, 0.5));
                 }
             }
         }
@@ -186,7 +181,6 @@ fn setup_settings_menu(mut commands: Commands, settings: Res<GameSettings>) {
         BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.9)),
         SettingsMenuUi,
     )).with_children(|parent| {
-        // Title
         parent.spawn((
             Text::new("SETTINGS"),
             TextFont {
@@ -200,7 +194,6 @@ fn setup_settings_menu(mut commands: Commands, settings: Res<GameSettings>) {
             },
         ));
         
-        // Controls Section
         parent.spawn((
             Node {
                 width: Val::Px(600.0),
@@ -247,7 +240,6 @@ fn setup_settings_menu(mut commands: Commands, settings: Res<GameSettings>) {
             }
         });
         
-        // Volume Section
         parent.spawn((
             Node {
                 width: Val::Px(600.0),
@@ -311,7 +303,6 @@ fn setup_settings_menu(mut commands: Commands, settings: Res<GameSettings>) {
             ));
         });
         
-        // Back Button
         parent.spawn((
             Node {
                 width: Val::Px(300.0),
@@ -333,7 +324,6 @@ fn setup_settings_menu(mut commands: Commands, settings: Res<GameSettings>) {
             ));
         });
         
-        // Instructions
         parent.spawn((
             Text::new("Press ESC or B to go back"),
             TextFont {
@@ -381,7 +371,6 @@ fn setup_difficulty_menu(mut commands: Commands) {
         BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.9)),
         DifficultyMenuUi,
     )).with_children(|parent| {
-        // Title
         parent.spawn((
             Text::new("SELECT DIFFICULTY"),
             TextFont {
@@ -395,7 +384,6 @@ fn setup_difficulty_menu(mut commands: Commands) {
             },
         ));
         
-        // Easy Button
         parent.spawn((
             MenuItem { index: 0 },
             Node {
@@ -406,7 +394,7 @@ fn setup_difficulty_menu(mut commands: Commands) {
                 margin: UiRect::all(Val::Px(15.0)),
                 ..default()
             },
-            BackgroundColor(Color::srgb(0.0, 0.9, 0.0)), // Highlighted by default
+            BackgroundColor(Color::srgb(0.0, 0.9, 0.0)),
         )).with_children(|button| {
             button.spawn((
                 Text::new("EASY MODE"),
@@ -430,7 +418,6 @@ fn setup_difficulty_menu(mut commands: Commands) {
             ));
         });
         
-        // Hard Button
         parent.spawn((
             MenuItem { index: 1 },
             Node {
@@ -465,7 +452,6 @@ fn setup_difficulty_menu(mut commands: Commands) {
             ));
         });
         
-        // Instructions
         parent.spawn((
             Text::new("Use ↑↓ Arrow Keys to Select  |  Press SPACE or ENTER to Confirm"),
             TextFont {
@@ -503,28 +489,25 @@ fn difficulty_menu_input(
     }
 
     if selection_changed {
-        // Update visual highlighting
         for (item, mut bg_color) in menu_items.iter_mut() {
             if item.index == menu_selection.selected_index {
                 if item.index == 0 {
-                    *bg_color = BackgroundColor(Color::srgb(0.0, 0.9, 0.0)); // Easy highlighted
+                    *bg_color = BackgroundColor(Color::srgb(0.0, 0.9, 0.0));
                 } else {
-                    *bg_color = BackgroundColor(Color::srgb(1.0, 0.0, 0.0)); // Hard highlighted
+                    *bg_color = BackgroundColor(Color::srgb(1.0, 0.0, 0.0));
                 }
             } else {
                 if item.index == 0 {
-                    *bg_color = BackgroundColor(Color::srgb(0.0, 0.7, 0.0)); // Easy normal
+                    *bg_color = BackgroundColor(Color::srgb(0.0, 0.7, 0.0));
                 } else {
-                    *bg_color = BackgroundColor(Color::srgb(0.8, 0.0, 0.0)); // Hard normal
+                    *bg_color = BackgroundColor(Color::srgb(0.8, 0.0, 0.0));
                 }
             }
         }
     }
 
-    // Keep keyboard shortcuts for backward compatibility
     if keyboard_input.just_pressed(KeyCode::KeyE) {
         *difficulty = Difficulty::Easy;
-        // Reset game state (despawn enemies, reset player and wave) before starting
         for entity in enemy_query.iter() {
             commands.entity(entity).despawn_recursive();
         }

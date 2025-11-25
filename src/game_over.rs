@@ -7,9 +7,7 @@ impl Plugin for GameOverPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::GameOver), setup_game_over)
            .add_systems(Update, game_over_input.run_if(in_state(GameState::GameOver)))
-           .add_systems(OnExit(GameState::GameOver), cleanup_game_over)
-           // Also reset game state when entering Running from Menu/Difficulty selection
-           .add_systems(OnEnter(GameState::Running), reset_game_on_start);
+           .add_systems(OnExit(GameState::GameOver), cleanup_game_over);
     }
 }
 
@@ -58,11 +56,26 @@ fn game_over_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut next_state: ResMut<NextState<GameState>>,
     enemy_query: Query<Entity, With<crate::enemy::Enemy>>,
+    boss_query: Query<Entity, With<crate::boss::Boss>>,
+    boss_particle_query: Query<Entity, With<crate::boss::BossParticle>>,
+    boss_health_bar_query: Query<Entity, With<crate::boss::BossHealthBar>>,
     mut player_query: Query<&mut crate::player::Ship, With<crate::player::Player>>,
     mut wave: ResMut<crate::resources::Wave>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         for entity in enemy_query.iter() {
+            commands.entity(entity).despawn_recursive();
+        }
+        
+        for entity in boss_query.iter() {
+            commands.entity(entity).despawn_recursive();
+        }
+        
+        for entity in boss_particle_query.iter() {
+            commands.entity(entity).despawn_recursive();
+        }
+        
+        for entity in boss_health_bar_query.iter() {
             commands.entity(entity).despawn_recursive();
         }
         
@@ -85,24 +98,37 @@ fn cleanup_game_over(mut commands: Commands, query: Query<Entity, With<GameOverU
 fn reset_game_on_start(
     mut commands: Commands,
     enemy_query: Query<Entity, With<crate::enemy::Enemy>>,
+    boss_query: Query<Entity, With<crate::boss::Boss>>,
+    boss_particle_query: Query<Entity, With<crate::boss::BossParticle>>,
+    boss_health_bar_query: Query<Entity, With<crate::boss::BossHealthBar>>,
     mut player_query: Query<(&mut crate::player::Ship, &mut Transform), With<crate::player::Player>>,
     mut wave: ResMut<crate::resources::Wave>,
     mut typing_buffer: ResMut<crate::ui::TypingBuffer>,
 ) {
-    // Despawn any existing enemies
     for entity in enemy_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
-
-    // Reset player ship stats and transform
-    if let Ok((mut ship, mut transform)) = player_query.get_single_mut() {
-        *ship = crate::player::Ship::default();
-        *transform = Transform::default();
+    
+    for entity in boss_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    
+    for entity in boss_particle_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    
+    for entity in boss_health_bar_query.iter() {
+        commands.entity(entity).despawn_recursive();
     }
 
-    // Reset wave/resource state
+    if let Ok((mut ship, mut transform)) = player_query.get_single_mut() {
+        *ship = crate::player::Ship::default();
+        transform.translation = Vec3::new(0.0, 0.0, 10.0);
+        transform.rotation = Quat::IDENTITY;
+        transform.scale = Vec3::splat(30.0);
+    }
+
     *wave = crate::resources::Wave::default();
 
-    // Clear typing buffer
     typing_buffer.text.clear();
 }

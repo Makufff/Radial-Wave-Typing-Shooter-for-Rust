@@ -24,10 +24,10 @@ pub struct Particle {
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum ParticleType {
-    Trail,      // Blade trail particles
-    Explosion,  // Enemy death explosion
-    Hit,        // Laser hit effect
-    Error,      // Mistake particles
+    Trail,     
+    Explosion, 
+    Hit,       
+    Error,     
 }
 
 pub fn spawn_blade_trail(commands: &mut Commands, start: Vec3, end: Vec3) {
@@ -57,7 +57,7 @@ pub fn spawn_blade_trail(commands: &mut Commands, start: Vec3, end: Vec3) {
                 ),
                 lifetime: Timer::from_seconds(rng.gen_range(0.2..0.5), TimerMode::Once),
                 max_lifetime: 0.5,
-                color: Color::srgb(0.0, 0.5, 1.0), // Blue trail
+                color: Color::srgb(0.0, 0.5, 1.0),
                 size: rng.gen_range(2.0..5.0),
                 particle_type: ParticleType::Trail,
             },
@@ -109,7 +109,7 @@ pub fn spawn_laser_hit(commands: &mut Commands, position: Vec3) {
                 velocity,
                 lifetime: Timer::from_seconds(rng.gen_range(0.2..0.4), TimerMode::Once),
                 max_lifetime: 0.4,
-                color: Color::srgb(0.0, 0.8, 1.0), // Cyan for laser
+                color: Color::srgb(0.0, 0.8, 1.0),
                 size: rng.gen_range(2.0..4.0),
                 particle_type: ParticleType::Hit,
             },
@@ -135,7 +135,7 @@ pub fn spawn_error_particles(commands: &mut Commands, position: Vec3) {
                 velocity,
                 lifetime: Timer::from_seconds(rng.gen_range(0.3..0.6), TimerMode::Once),
                 max_lifetime: 0.6,
-                color: Color::srgb(1.0, 0.2, 0.2), // Red for errors
+                color: Color::srgb(1.0, 0.2, 0.2),
                 size: rng.gen_range(3.0..6.0),
                 particle_type: ParticleType::Error,
             },
@@ -154,10 +154,8 @@ fn update_particles(
         if particle.lifetime.finished() {
             commands.entity(entity).despawn();
         } else {
-            // Update position based on velocity
             transform.translation += particle.velocity * time.delta_secs();
             
-            // Apply drag/friction
             particle.velocity *= 0.95;
         }
     }
@@ -168,11 +166,9 @@ fn render_particles(
     query: Query<(&Transform, &Particle)>,
 ) {
     for (transform, particle) in query.iter() {
-        // Calculate alpha based on remaining lifetime
         let life_ratio = particle.lifetime.remaining_secs() / particle.max_lifetime;
         let alpha = life_ratio.clamp(0.0, 1.0);
         
-        // Draw particle as a circle
         let color = particle.color.with_alpha(alpha);
         gizmos.circle_2d(
             transform.translation.truncate(),
