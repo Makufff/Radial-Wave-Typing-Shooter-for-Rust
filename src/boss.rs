@@ -332,7 +332,7 @@ pub fn boss_typing_system(
             }
             
             if let Ok((boss_entity, mut boss, mut boss_line, children, boss_transform)) = boss_query.get_single_mut() {
-                let current_line = &boss_line.lines[boss_line.current_line_index];
+                let current_line = boss_line.lines[boss_line.current_line_index].clone();
                 
                 let matches = match *difficulty {
                     crate::resources::Difficulty::Easy => {
