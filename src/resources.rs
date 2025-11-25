@@ -4,6 +4,7 @@ use bevy::prelude::*;
 pub enum GameState {
     #[default]
     Menu,
+    Settings,
     DifficultySelect,
     Running,
     Paused,
@@ -15,6 +16,50 @@ pub enum Difficulty {
     #[default]
     Easy,
     Hard,
+}
+
+#[derive(Resource, Debug, Clone)]
+pub struct GameSettings {
+    pub master_volume: f32,
+    pub sfx_volume: f32,
+    pub music_volume: f32,
+}
+
+impl Default for GameSettings {
+    fn default() -> Self {
+        Self {
+            master_volume: 1.0,
+            sfx_volume: 1.0,
+            music_volume: 1.0,
+        }
+    }
+}
+
+#[derive(Resource, Debug, Clone)]
+pub struct MenuSelection {
+    pub selected_index: usize,
+    pub item_count: usize,
+}
+
+impl MenuSelection {
+    pub fn new(item_count: usize) -> Self {
+        Self {
+            selected_index: 0,
+            item_count,
+        }
+    }
+    
+    pub fn move_up(&mut self) {
+        if self.selected_index == 0 {
+            self.selected_index = self.item_count - 1;
+        } else {
+            self.selected_index -= 1;
+        }
+    }
+    
+    pub fn move_down(&mut self) {
+        self.selected_index = (self.selected_index + 1) % self.item_count;
+    }
 }
 
 #[derive(Resource)]
