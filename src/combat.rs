@@ -101,7 +101,7 @@ fn typing_system(
             continue;
         }
         
-        if let Key::Space = ev.logical_key {
+        if let Key::Enter | Key::Space = ev.logical_key {
             let typed_word = typing_buffer.text.trim();
             
             if typed_word.is_empty() {
