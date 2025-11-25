@@ -10,7 +10,6 @@ impl Plugin for CombatPlugin {
             weapon_switching,
             typing_system,
             collision_system,
-            draw_combat_effects,
         ).run_if(in_state(crate::resources::GameState::Running)));
     }
 }
@@ -37,52 +36,6 @@ fn weapon_switching(
 }
 
 use bevy::input::keyboard::{KeyboardInput, Key};
-
-#[derive(Component)]
-struct LaserVisual {
-    start: Vec3,
-    end: Vec3,
-    timer: Timer,
-}
-
-#[derive(Component)]
-struct ExplosionVisual {
-    position: Vec3,
-    max_radius: f32,
-    timer: Timer,
-}
-
-fn draw_combat_effects(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut gizmos: Gizmos,
-    mut laser_query: Query<(Entity, &mut LaserVisual)>,
-    mut explosion_query: Query<(Entity, &mut ExplosionVisual)>,
-) {
-    // Lasers
-    for (entity, mut laser) in laser_query.iter_mut() {
-        laser.timer.tick(time.delta());
-        if laser.timer.finished() {
-            commands.entity(entity).despawn();
-        } else {
-            let alpha = laser.timer.remaining_secs() / laser.timer.duration().as_secs_f32();
-            gizmos.line_2d(laser.start.truncate(), laser.end.truncate(), Color::srgb(0.0, 0.0, 1.0).with_alpha(alpha));
-        }
-    }
-
-    // Explosions
-    for (entity, mut explosion) in explosion_query.iter_mut() {
-        explosion.timer.tick(time.delta());
-        if explosion.timer.finished() {
-            commands.entity(entity).despawn();
-        } else {
-            let progress = 1.0 - (explosion.timer.remaining_secs() / explosion.timer.duration().as_secs_f32());
-            let radius = explosion.max_radius * progress;
-            let alpha = 1.0 - progress;
-            gizmos.circle_2d(explosion.position.truncate(), radius, Color::srgb(0.0, 0.0, 1.0).with_alpha(alpha));
-        }
-    }
-}
 
 fn typing_system(
     mut commands: Commands,
@@ -154,12 +107,6 @@ fn typing_system(
                         commands.entity(entity).despawn_recursive();
                     }
                     Weapon::Laser => {
-                        commands.spawn(LaserVisual {
-                            start: player_transform.translation,
-                            end: enemy_pos,
-                            timer: Timer::from_seconds(0.2, TimerMode::Once),
-                        });
-                        
                         // Get mutable health reference
                         if let Ok((_, _, mut health, _, _)) = enemy_query.get_mut(entity) {
                             health.current -= 1;
@@ -207,11 +154,6 @@ fn typing_system(
                         println!("Blade Parry!");
                     }
                     Weapon::Laser => {
-                        commands.spawn(ExplosionVisual {
-                            position: player_transform.translation + Vec3::new(0.0, 50.0, 0.0),
-                            max_radius: 100.0,
-                            timer: Timer::from_seconds(0.5, TimerMode::Once),
-                        });
                         println!("Laser Explode!");
                     }
                 }
