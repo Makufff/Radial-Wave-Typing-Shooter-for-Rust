@@ -148,6 +148,8 @@ fn typing_system(
                         ship.score += 100 * (ship.combo + 1);
                         ship.combo += 1;
                         player_transform.translation = enemy_pos;
+                        // Grant invulnerability to prevent collision damage during warp
+                        ship.invulnerability_timer = Timer::from_seconds(0.15, TimerMode::Once);
                         println!("Blade Slide Kill!");
                         commands.entity(entity).despawn_recursive();
                     }
@@ -175,6 +177,8 @@ fn typing_system(
                                 
                                 ship.score += 100 * (ship.combo + 1);
                                 ship.combo += 1;
+                                // Grant brief invulnerability after kill
+                                ship.invulnerability_timer = Timer::from_seconds(0.15, TimerMode::Once);
                                 println!("Laser Kill!");
                                 commands.entity(entity).despawn_recursive();
                             } else {
@@ -225,6 +229,11 @@ fn collision_system(
     mut next_state: ResMut<NextState<crate::resources::GameState>>,
 ) {
     if let Ok((mut ship, player_transform)) = player_query.get_single_mut() {
+        // Skip collision damage if player is invulnerable
+        if !ship.invulnerability_timer.finished() {
+            return;
+        }
+        
         for (enemy_entity, enemy_transform) in enemy_query.iter() {
             let distance = player_transform.translation.distance(enemy_transform.translation);
             if distance < 30.0 {

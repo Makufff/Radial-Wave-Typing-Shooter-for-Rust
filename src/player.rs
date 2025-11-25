@@ -5,7 +5,7 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_player)
-           .add_systems(Update, player_movement.run_if(in_state(crate::resources::GameState::Running)));
+           .add_systems(Update, (player_movement, update_invulnerability).run_if(in_state(crate::resources::GameState::Running)));
     }
 }
 
@@ -21,6 +21,7 @@ pub struct Ship {
     pub score: u32,
     pub hp: i32,
     pub combo: u32,
+    pub invulnerability_timer: Timer,
 }
 
 impl Default for Ship {
@@ -33,6 +34,7 @@ impl Default for Ship {
             score: 0,
             hp: 3,
             combo: 0,
+            invulnerability_timer: Timer::from_seconds(0.0, TimerMode::Once),
         }
     }
 }
@@ -83,5 +85,14 @@ fn player_movement(
         transform.scale = Vec3::new(30.0 * (1.0 + wobble), 30.0, 1.0);
     } else {
         transform.scale = Vec3::splat(30.0);
+    }
+}
+
+fn update_invulnerability(
+    time: Res<Time>,
+    mut query: Query<&mut Ship, With<Player>>,
+) {
+    if let Ok(mut ship) = query.get_single_mut() {
+        ship.invulnerability_timer.tick(time.delta());
     }
 }
