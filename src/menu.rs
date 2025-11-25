@@ -113,7 +113,7 @@ fn setup_main_menu(mut commands: Commands) {
         
         // Instructions
         parent.spawn((
-            Text::new("Use ↑↓ Arrow Keys to Select  |  Press SPACE or ENTER to Confirm"),
+            Text::new("Use Arrow Keys to Select\nPress SPACE or ENTER to Confirm"),
             TextFont {
                 font_size: 22.0,
                 ..default()
@@ -482,14 +482,18 @@ fn setup_difficulty_menu(mut commands: Commands) {
 }
 
 fn difficulty_menu_input(
+    mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut next_state: ResMut<NextState<GameState>>,
     mut difficulty: ResMut<Difficulty>,
     mut menu_selection: ResMut<MenuSelection>,
     mut menu_items: Query<(&MenuItem, &mut BackgroundColor), With<MenuItem>>,
+    enemy_query: Query<Entity, With<crate::enemy::Enemy>>,
+    mut player_query: Query<&mut crate::player::Ship, With<crate::player::Player>>,
+    mut wave: ResMut<crate::resources::Wave>,
 ) {
     let mut selection_changed = false;
-    
+
     if keyboard_input.just_pressed(KeyCode::ArrowUp) {
         menu_selection.move_up();
         selection_changed = true;
@@ -497,7 +501,7 @@ fn difficulty_menu_input(
         menu_selection.move_down();
         selection_changed = true;
     }
-    
+
     if selection_changed {
         // Update visual highlighting
         for (item, mut bg_color) in menu_items.iter_mut() {
@@ -516,13 +520,28 @@ fn difficulty_menu_input(
             }
         }
     }
-    
+
     // Keep keyboard shortcuts for backward compatibility
     if keyboard_input.just_pressed(KeyCode::KeyE) {
         *difficulty = Difficulty::Easy;
+        // Reset game state (despawn enemies, reset player and wave) before starting
+        for entity in enemy_query.iter() {
+            commands.entity(entity).despawn_recursive();
+        }
+        if let Ok(mut ship) = player_query.get_single_mut() {
+            *ship = crate::player::Ship::default();
+        }
+        *wave = crate::resources::Wave::default();
         next_state.set(GameState::Running);
     } else if keyboard_input.just_pressed(KeyCode::KeyH) {
         *difficulty = Difficulty::Hard;
+        for entity in enemy_query.iter() {
+            commands.entity(entity).despawn_recursive();
+        }
+        if let Ok(mut ship) = player_query.get_single_mut() {
+            *ship = crate::player::Ship::default();
+        }
+        *wave = crate::resources::Wave::default();
         next_state.set(GameState::Running);
     } else if keyboard_input.just_pressed(KeyCode::Space) || keyboard_input.just_pressed(KeyCode::Enter) {
         match menu_selection.selected_index {
@@ -530,6 +549,13 @@ fn difficulty_menu_input(
             1 => *difficulty = Difficulty::Hard,
             _ => {}
         }
+        for entity in enemy_query.iter() {
+            commands.entity(entity).despawn_recursive();
+        }
+        if let Ok(mut ship) = player_query.get_single_mut() {
+            *ship = crate::player::Ship::default();
+        }
+        *wave = crate::resources::Wave::default();
         next_state.set(GameState::Running);
     }
 }

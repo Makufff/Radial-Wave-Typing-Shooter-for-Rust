@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::resources::GameState;
+use crate::resources::{GameState, ShouldResetOnStart};
 
 pub struct PausePlugin;
 
@@ -27,10 +27,15 @@ fn pause_input(
 fn resume_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut next_state: ResMut<NextState<GameState>>,
+    mut should_reset: Option<ResMut<ShouldResetOnStart>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Escape) {
         next_state.set(GameState::Running);
     } else if keyboard_input.just_pressed(KeyCode::KeyQ) {
+        // Mark that the next time we start the game from the menu it should be a fresh init
+        if let Some(mut flag) = should_reset {
+            flag.0 = true;
+        }
         next_state.set(GameState::Menu);
     }
 }

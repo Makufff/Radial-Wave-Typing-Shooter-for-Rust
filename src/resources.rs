@@ -65,6 +65,9 @@ impl MenuSelection {
 #[derive(Resource)]
 pub struct WordList(pub Vec<String>);
 
+#[derive(Resource, Default, Debug)]
+pub struct ShouldResetOnStart(pub bool);
+
 #[derive(Resource)]
 pub struct Wave {
     pub current: usize,
