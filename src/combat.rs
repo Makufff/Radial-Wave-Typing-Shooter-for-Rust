@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use crate::enemy::{Enemy, Word};
 use crate::player::{Player, Ship};
+use crate::particles::{spawn_blade_trail, spawn_explosion, spawn_laser_hit, spawn_error_particles};
 
 pub struct CombatPlugin;
 
@@ -100,9 +101,18 @@ fn typing_system(
                         
                         ship.score += 100 * (ship.combo + 1);
                         ship.combo += 1;
+                        
+                        // Spawn blade trail particles
+                        let start_pos = player_transform.translation;
+                        spawn_blade_trail(&mut commands, start_pos, enemy_pos);
+                        
                         player_transform.translation = enemy_pos;
                         // Grant invulnerability to prevent collision damage during warp
                         ship.invulnerability_timer = Timer::from_seconds(0.15, TimerMode::Once);
+                        
+                        // Spawn explosion particles at enemy position
+                        spawn_explosion(&mut commands, enemy_pos, Color::srgb(0.0, 1.0, 0.5), 20);
+                        
                         println!("Blade Slide Kill!");
                         commands.entity(entity).despawn_recursive();
                     }
@@ -126,6 +136,10 @@ fn typing_system(
                                 ship.combo += 1;
                                 // Grant brief invulnerability after kill
                                 ship.invulnerability_timer = Timer::from_seconds(0.15, TimerMode::Once);
+                                
+                                // Spawn explosion particles
+                                spawn_explosion(&mut commands, enemy_pos, Color::srgb(0.0, 0.8, 1.0), 15);
+                                
                                 println!("Laser Kill!");
                                 commands.entity(entity).despawn_recursive();
                             } else {
@@ -138,6 +152,10 @@ fn typing_system(
                                         text_transform.scale = Vec3::splat(0.06);
                                     }
                                 }
+                                
+                                // Spawn laser hit particles
+                                spawn_laser_hit(&mut commands, enemy_pos);
+                                
                                 println!("Laser Hit! Enemy HP: {}", health.current);
                             }
                         }
@@ -154,6 +172,8 @@ fn typing_system(
                         println!("Blade Parry!");
                     }
                     Weapon::Laser => {
+                        // Spawn error particles
+                        spawn_error_particles(&mut commands, player_transform.translation);
                         println!("Laser Explode!");
                     }
                 }
@@ -181,6 +201,10 @@ fn collision_system(
             if distance < 30.0 {
                 ship.hp -= 1;
                 ship.combo = 0;
+                
+                // Spawn collision explosion particles
+                spawn_explosion(&mut commands, enemy_transform.translation, Color::srgb(1.0, 0.3, 0.0), 12);
+                
                 println!("Player Hit! HP: {}", ship.hp);
                 commands.entity(enemy_entity).despawn_recursive();
                 
