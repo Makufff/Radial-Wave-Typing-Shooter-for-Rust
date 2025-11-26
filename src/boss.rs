@@ -112,7 +112,7 @@ pub fn spawn_boss(
         Boss {
             health,
             max_health: health,
-            particle_timer: Timer::from_seconds(2.5, TimerMode::Repeating),
+            particle_timer: Timer::from_seconds(3.5, TimerMode::Repeating),
         },
         BossLine {
             lines: lines.clone(),
@@ -149,11 +149,14 @@ fn boss_particle_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    use rand::Rng;
+    
     for (mut boss, transform) in boss_query.iter_mut() {
         if boss.particle_timer.tick(time.delta()).just_finished() {
-            let speed = 120.0;
+            let speed = 90.0;
+            let mut rng = rand::thread_rng();
             
-            let pattern = (boss.particle_timer.times_finished_this_tick() % 5) as u32;
+            let pattern = rng.gen_range(0..8);
             
             match pattern {
                 0 => {
@@ -171,7 +174,7 @@ fn boss_particle_system(
                     }
                 }
                 1 => {
-                    let particle_count = 8;
+                    let particle_count = 6;
                     let offset_angle = time.elapsed_secs() * 2.0;
                     for i in 0..particle_count {
                         let angle = (i as f32 / particle_count as f32) * std::f32::consts::TAU + offset_angle;
@@ -188,14 +191,16 @@ fn boss_particle_system(
                 2 => {
                     for i in 0..4 {
                         let angle = i as f32 * std::f32::consts::FRAC_PI_2;
-                        let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * 1.3;
-                        
-                        commands.spawn((
-                            Mesh2d(meshes.add(Circle::new(15.0))),
-                            MeshMaterial2d(materials.add(Color::srgb(1.0, 0.0, 0.3))),
-                            Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0),
-                            BossParticle { velocity },
-                        ));
+                        for j in 0..3 {
+                            let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * (1.0 + j as f32 * 0.3);
+                            
+                            commands.spawn((
+                                Mesh2d(meshes.add(Circle::new(15.0))),
+                                MeshMaterial2d(materials.add(Color::srgb(1.0, 0.0, 0.3))),
+                                Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0),
+                                BossParticle { velocity },
+                            ));
+                        }
                     }
                 }
                 3 => {
@@ -203,8 +208,8 @@ fn boss_particle_system(
                         let diff = player_transform.translation - transform.translation;
                         let angle_to_player = diff.y.atan2(diff.x);
                         
-                        for i in -1..=1 {
-                            let angle = angle_to_player + (i as f32 * 0.2);
+                        for i in -2..=2 {
+                            let angle = angle_to_player + (i as f32 * 0.15);
                             let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * 1.5;
                             
                             commands.spawn((
@@ -216,17 +221,63 @@ fn boss_particle_system(
                         }
                     }
                 }
-                _ => {
-                    let points = 5;
+                4 => {
+                    let points = 12;
                     let offset = time.elapsed_secs() * 3.0;
                     for i in 0..points {
-                        let angle = (i as f32 / points as f32) * std::f32::consts::TAU + offset;
-                        let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * 0.8;
+                        let angle = (i as f32 / points as f32) * std::f32::consts::TAU * 2.0 + offset;
+                        let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * 0.9;
                         
                         commands.spawn((
                             Mesh2d(meshes.add(Triangle2d::default())),
                             MeshMaterial2d(materials.add(Color::srgb(0.0, 1.0, 1.0))),
                             Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0).with_scale(Vec3::splat(20.0)),
+                            BossParticle { velocity },
+                        ));
+                    }
+                }
+                5 => {
+                    let wave_count = 3;
+                    for wave in 0..wave_count {
+                        let base_angle = (wave as f32 / wave_count as f32) * std::f32::consts::TAU;
+                        for i in 0..5 {
+                            let spread = (i as f32 - 2.0) * 0.3;
+                            let angle = base_angle + spread;
+                            let velocity = Vec2::new(angle.cos(), angle.sin()) * speed;
+                            
+                            commands.spawn((
+                                Mesh2d(meshes.add(Circle::new(10.0))),
+                                MeshMaterial2d(materials.add(Color::srgb(0.0, 0.8, 1.0))),
+                                Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0),
+                                BossParticle { velocity },
+                            ));
+                        }
+                    }
+                }
+                6 => {
+                    for _ in 0..12 {
+                        let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+                        let speed_mult = rng.gen_range(0.7..1.5);
+                        let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * speed_mult;
+                        
+                        commands.spawn((
+                            Mesh2d(meshes.add(Circle::new(8.0))),
+                            MeshMaterial2d(materials.add(Color::srgb(1.0, 1.0, 0.0))),
+                            Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0),
+                            BossParticle { velocity },
+                        ));
+                    }
+                }
+                _ => {
+                    let minion_count = 4;
+                    for i in 0..minion_count {
+                        let angle = (i as f32 / minion_count as f32) * std::f32::consts::TAU + rng.gen_range(0.0..0.5);
+                        let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * 0.5;
+                        
+                        commands.spawn((
+                            Mesh2d(meshes.add(Circle::new(20.0))),
+                            MeshMaterial2d(materials.add(Color::srgb(0.8, 0.0, 0.8))),
+                            Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0),
                             BossParticle { velocity },
                         ));
                     }
