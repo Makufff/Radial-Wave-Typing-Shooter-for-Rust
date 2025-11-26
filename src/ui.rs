@@ -57,7 +57,6 @@ fn setup_ui(mut commands: Commands) {
         ScoreText,
     ));
 
-    // HP
     commands.spawn((
         Text::new("HP: 3"),
         TextFont {
@@ -74,7 +73,6 @@ fn setup_ui(mut commands: Commands) {
         HpText,
     ));
 
-    // Combo
     commands.spawn((
         Text::new("Combo: 0"),
         TextFont {
@@ -91,7 +89,6 @@ fn setup_ui(mut commands: Commands) {
         ComboText,
     ));
 
-    // Wave
     commands.spawn((
         Text::new("Wave: 1"),
         TextFont {
@@ -108,7 +105,6 @@ fn setup_ui(mut commands: Commands) {
         WaveText,
     ));
 
-    // Weapon
     commands.spawn((
         Text::new("Weapon: Blade"),
         TextFont {
@@ -125,7 +121,6 @@ fn setup_ui(mut commands: Commands) {
         WeaponText,
     ));
 
-    // Typing Input Box
     commands.spawn((
         Text::new(""),
         TextFont {
@@ -133,12 +128,16 @@ fn setup_ui(mut commands: Commands) {
             ..default()
         },
         TextColor(Color::WHITE),
+        TextLayout::new(JustifyText::Center, LineBreak::AnyCharacter),
         Node {
             position_type: PositionType::Absolute,
             bottom: Val::Px(50.0),
             left: Val::Percent(10.0),
             width: Val::Percent(80.0),
-            height: Val::Px(60.0),
+            max_width: Val::Percent(80.0),
+            height: Val::Auto,
+            min_height: Val::Px(60.0),
+            padding: UiRect::all(Val::Px(15.0)),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             ..default()
@@ -194,7 +193,7 @@ fn setup_background(
             commands.spawn((
                 Mesh2d(meshes.add(Circle::new(2.0))),
                 MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 1.0))),
-                Transform::from_xyz(x, y, -10.0), // z=-10 (between lines and entities)
+                Transform::from_xyz(x, y, -10.0),
                 GridPoint { original_pos: Vec3::new(x, y, -10.0) },
             ));
         }
@@ -224,7 +223,7 @@ use bevy::input::keyboard::{KeyboardInput, Key};
 fn update_typing_input(
     mut key_evr: EventReader<KeyboardInput>,
     mut typing_buffer: ResMut<TypingBuffer>,
-    mut query: Query<&mut Text, With<TypingInputBox>>,
+    mut query: Query<(&mut Text, &mut TextFont), With<TypingInputBox>>,
 ) {
     for ev in key_evr.read() {
         if !ev.state.is_pressed() {
@@ -234,7 +233,6 @@ fn update_typing_input(
         match &ev.logical_key {
             Key::Character(s) => {
                 for c in s.chars() {
-                    // Allow all characters that are not control characters
                     if !c.is_control() {
                         typing_buffer.text.push(c);
                     }
@@ -251,7 +249,9 @@ fn update_typing_input(
         }
     }
     
-    if let Ok(mut text) = query.get_single_mut() {
-        text.0 = format!("> {}", typing_buffer.text);
+    if let Ok((mut text, mut font)) = query.get_single_mut() {
+        text.0 = typing_buffer.text.clone();
+        
+        font.font_size = 35.0;
     }
 }

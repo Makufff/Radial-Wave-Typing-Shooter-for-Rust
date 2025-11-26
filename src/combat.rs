@@ -91,7 +91,7 @@ fn typing_system(
                 }
             }
             
-            for (entity, children_vec, enemy_pos, weapon, current_health) in actions {
+            for (entity, children_vec, enemy_pos, weapon, _current_health) in actions {
                 match weapon {
                     Weapon::Blade => {
                         for &child in children_vec.iter() {

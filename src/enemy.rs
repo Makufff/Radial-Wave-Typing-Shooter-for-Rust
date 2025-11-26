@@ -42,7 +42,7 @@ fn spawn_enemies(
     mut timer: ResMut<SpawnTimer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut content_manager: ResMut<ContentManager>,
+    content_manager: ResMut<ContentManager>,
     mut wave: ResMut<Wave>,
     difficulty: Res<crate::resources::Difficulty>,
     boss_query: Query<Entity, With<crate::boss::Boss>>,

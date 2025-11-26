@@ -122,7 +122,7 @@ pub fn spawn_boss(
         parent.spawn((
             Text2d::new(&lines[0]),
             TextFont {
-                font_size: 50.0,
+                font_size: (50.0 * (20.0 / lines[0].len().max(1) as f32).min(1.0)).clamp(20.0, 50.0),
                 ..default()
             },
             TextColor(Color::srgb(1.0, 1.0, 0.0)),
@@ -309,7 +309,7 @@ pub fn boss_typing_system(
     mut commands: Commands,
     mut key_evr: EventReader<bevy::input::keyboard::KeyboardInput>,
     mut boss_query: Query<(Entity, &mut Boss, &mut BossLine, &Children, &Transform)>,
-    mut text_query: Query<&mut Text2d>,
+    mut text_query: Query<(&mut Text2d, &mut TextFont)>,
     mut typing_buffer: ResMut<crate::ui::TypingBuffer>,
     mut content_manager: ResMut<crate::resources::ContentManager>,
     mut wave: ResMut<crate::resources::Wave>,
@@ -356,15 +356,17 @@ pub fn boss_typing_system(
                     
                     let children_vec: Vec<Entity> = children.iter().copied().collect();
                     if children_vec.len() >= 2 {
-                        if let Ok(mut text) = text_query.get_mut(children_vec[0]) {
+                        if let Ok((mut text, mut font)) = text_query.get_mut(children_vec[0]) {
                             if boss_line.current_line_index < boss_line.lines.len() {
                                 **text = boss_line.lines[boss_line.current_line_index].clone();
+                                let line_len = text.len().max(1) as f32;
+                                font.font_size = (50.0 * (20.0 / line_len).min(1.0)).clamp(20.0, 50.0);
                             } else {
                                 **text = "DEFEATED!".to_string();
                             }
                         }
                         
-                        if let Ok(mut text) = text_query.get_mut(children_vec[1]) {
+                        if let Ok((mut text, _)) = text_query.get_mut(children_vec[1]) {
                             **text = format!("HP: {}/{}", boss.health, boss.max_health);
                         }
                     }
