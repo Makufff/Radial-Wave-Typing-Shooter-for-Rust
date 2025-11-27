@@ -103,7 +103,7 @@ impl Wave {
         } else {
             primes.last().unwrap() + (self.current - primes.len()) * 2
         }
-        // 1
+    //     1
     }
 }
 

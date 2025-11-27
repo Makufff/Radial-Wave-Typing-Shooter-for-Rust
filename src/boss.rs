@@ -128,16 +128,6 @@ pub fn spawn_boss(
             TextColor(Color::srgb(1.0, 1.0, 0.0)),
             Transform::from_xyz(0.0, 100.0, 20.0),
         ));
-        
-        parent.spawn((
-            Text2d::new(format!("HP: {}/{}", health, health)),
-            TextFont {
-                font_size: 45.0,
-                ..default()
-            },
-            TextColor(Color::srgb(1.0, 0.0, 0.0)),
-            Transform::from_xyz(0.0, -100.0, 1.0),
-        ));
     });
 }
 
@@ -406,7 +396,7 @@ pub fn boss_typing_system(
                     }
                     
                     let children_vec: Vec<Entity> = children.iter().copied().collect();
-                    if children_vec.len() >= 2 {
+                    if !children_vec.is_empty() {
                         if let Ok((mut text, mut font)) = text_query.get_mut(children_vec[0]) {
                             if boss_line.current_line_index < boss_line.lines.len() {
                                 **text = boss_line.lines[boss_line.current_line_index].clone();
@@ -415,10 +405,6 @@ pub fn boss_typing_system(
                             } else {
                                 **text = "DEFEATED!".to_string();
                             }
-                        }
-                        
-                        if let Ok((mut text, _)) = text_query.get_mut(children_vec[1]) {
-                            **text = format!("HP: {}/{}", boss.health, boss.max_health);
                         }
                     }
                     
