@@ -48,8 +48,6 @@ fn typing_system(
     mut typing_buffer: ResMut<crate::ui::TypingBuffer>,
     difficulty: Res<crate::resources::Difficulty>,
     boss_query: Query<Entity, With<crate::boss::Boss>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     if !boss_query.is_empty() {
         return;
@@ -72,7 +70,7 @@ fn typing_system(
             let mut hit_any = false;
             let mut actions = Vec::new();
 
-            for (entity, word, health, children, enemy_transform, is_shooting) in enemy_query.iter_mut() {
+            for (entity, word, health, children, enemy_transform, _is_shooting) in enemy_query.iter_mut() {
                 let matches = match *difficulty {
                     crate::resources::Difficulty::Easy => {
                         word.text.to_lowercase() == typed_word.to_lowercase()
@@ -87,18 +85,13 @@ fn typing_system(
                     let children_vec: Vec<Entity> = children.iter().copied().collect();
                     let enemy_pos = enemy_transform.translation;
                     let current_health = health.current;
-                    let drop_chance = if is_shooting.is_some() { 0.5 } else { 0.2 };
                     
-                    actions.push((entity, children_vec, enemy_pos, ship.current_weapon, current_health, drop_chance));
+                    actions.push((entity, children_vec, enemy_pos, ship.current_weapon, current_health));
                     break;
                 }
             }
             
-            for (entity, children_vec, enemy_pos, weapon, _current_health, drop_chance) in actions {
-                use rand::Rng;
-                let mut rng = rand::thread_rng();
-                let should_drop = rng.gen_bool(drop_chance);
-                
+            for (entity, children_vec, enemy_pos, weapon, _current_health) in actions {
                 match weapon {
                     Weapon::Blade => {
                         for &child in children_vec.iter() {
@@ -121,10 +114,6 @@ fn typing_system(
                         ship.invulnerability_timer = Timer::from_seconds(0.15, TimerMode::Once);
                         
                         spawn_explosion(&mut commands, enemy_pos, Color::srgb(0.0, 1.0, 0.5), 20);
-                        
-                        if should_drop {
-                            crate::items::spawn_health_item(&mut commands, &mut meshes, &mut materials, enemy_pos);
-                        }
                         
                         println!("Blade Slide Kill!");
                         commands.entity(entity).despawn_recursive();
@@ -149,10 +138,6 @@ fn typing_system(
                                 ship.invulnerability_timer = Timer::from_seconds(0.15, TimerMode::Once);
                                 
                                 spawn_explosion(&mut commands, enemy_pos, Color::srgb(0.0, 0.8, 1.0), 15);
-                                
-                                if should_drop {
-                                    crate::items::spawn_health_item(&mut commands, &mut meshes, &mut materials, enemy_pos);
-                                }
                                 
                                 println!("Laser Kill!");
                                 commands.entity(entity).despawn_recursive();

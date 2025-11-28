@@ -68,6 +68,7 @@ fn spawn_enemies(
     difficulty: Res<crate::resources::Difficulty>,
     boss_query: Query<Entity, With<crate::boss::Boss>>,
     mut next_state: ResMut<NextState<crate::resources::GameState>>,
+    enemy_query: Query<&Transform, With<Enemy>>,
 ) {
     if wave.current % 10 == 0 && wave.enemies_remaining > 0 {
         if boss_query.is_empty() {
@@ -81,10 +82,48 @@ fn spawn_enemies(
     if wave.enemies_remaining > 0 {
         if timer.0.tick(time.delta()).just_finished() {
             let mut rng = rand::thread_rng();
-            let angle = rng.gen_range(0.0..std::f32::consts::TAU);
-            let radius = 500.0;
-            let x = radius * angle.cos();
-            let y = radius * angle.sin();
+            
+            // Minimum distance between enemies to prevent overlap
+            const MIN_ENEMY_DISTANCE: f32 = 120.0;
+            const MAX_SPAWN_ATTEMPTS: i32 = 10;
+            
+            // Find a valid spawn position that doesn't overlap with existing enemies
+            let mut spawn_pos = Vec2::ZERO;
+            let mut valid_position = false;
+            
+            for _ in 0..MAX_SPAWN_ATTEMPTS {
+                let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+                let radius = 500.0;
+                let x = radius * angle.cos();
+                let y = radius * angle.sin();
+                let test_pos = Vec2::new(x, y);
+                
+                // Check if this position is too close to any existing enemy
+                let mut too_close = false;
+                for enemy_transform in enemy_query.iter() {
+                    let enemy_pos = enemy_transform.translation.truncate();
+                    let distance = test_pos.distance(enemy_pos);
+                    
+                    if distance < MIN_ENEMY_DISTANCE {
+                        too_close = true;
+                        break;
+                    }
+                }
+                
+                if !too_close {
+                    spawn_pos = test_pos;
+                    valid_position = true;
+                    break;
+                }
+            }
+            
+            // If no valid position found after max attempts, use the last generated position
+            // This is an edge case that should rarely happen
+            if !valid_position {
+                let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+                let radius = 500.0;
+                spawn_pos = Vec2::new(radius * angle.cos(), radius * angle.sin());
+            }
 
             let word_str = content_manager.get_word(*difficulty);
             
@@ -96,7 +135,7 @@ fn spawn_enemies(
                 commands.spawn((
                     Mesh2d(meshes.add(Rectangle::from_size(Vec2::splat(1.0)))),
                     MeshMaterial2d(materials.add(Color::srgb(1.0, 0.6, 0.0))),
-                    Transform::from_xyz(x, y, 10.0).with_scale(Vec3::splat(20.0)),
+                    Transform::from_xyz(spawn_pos.x, spawn_pos.y, 10.0).with_scale(Vec3::splat(20.0)),
                     Enemy { speed: 60.0 },
                     ShootingEnemy,
                     ShootTimer {
@@ -127,7 +166,7 @@ fn spawn_enemies(
                 commands.spawn((
                     Mesh2d(meshes.add(Triangle2d::default())),
                     MeshMaterial2d(materials.add(Color::srgb(1.0, 0.0, 0.0))),
-                    Transform::from_xyz(x, y, 10.0).with_scale(Vec3::splat(20.0)),
+                    Transform::from_xyz(spawn_pos.x, spawn_pos.y, 10.0).with_scale(Vec3::splat(20.0)),
                     Enemy { speed: 100.0 },
                     Word {
                         text: word_str.clone(),
@@ -178,12 +217,41 @@ fn enemy_movement(
         let player_pos = player_transform.translation;
         let mut closest_dist = f32::MAX;
 
-        for (mut transform, enemy) in query.iter_mut() {
-            let direction = (player_pos - transform.translation).normalize();
-            transform.translation += direction * enemy.speed * time.delta_secs();
+        // Collect all enemy positions first to use for separation calculation
+        let enemy_positions: Vec<Vec3> = query.iter().map(|(t, _)| t.translation).collect();
 
-            let angle = direction.y.atan2(direction.x) - std::f32::consts::FRAC_PI_2;
-            transform.rotation = Quat::from_rotation_z(angle);
+        for (mut transform, enemy) in query.iter_mut() {
+            // Seek Behavior: Move towards player
+            let to_player = player_pos - transform.translation;
+            let seek_direction = to_player.normalize_or_zero();
+            
+            // Separation Behavior: Move away from nearby enemies
+            let mut separation_force = Vec3::ZERO;
+            let separation_radius = 30.0;
+            let separation_weight = 1.5;
+            
+            for &other_pos in &enemy_positions {
+                let dist = transform.translation.distance(other_pos);
+                // Avoid self-check (dist > 0.0) and check radius
+                if dist > 0.01 && dist < separation_radius {
+                    let push_dir = (transform.translation - other_pos).normalize_or_zero();
+                    // Weight by inverse distance (closer = stronger push)
+                    separation_force += push_dir * (1.0 - dist / separation_radius);
+                }
+            }
+
+            // Combine forces
+            // We want to move towards player but be pushed by separation
+            // Using a weighted sum
+            let final_direction = (seek_direction + separation_force * separation_weight).normalize_or_zero();
+
+            transform.translation += final_direction * enemy.speed * time.delta_secs();
+
+            // Rotate to face movement direction
+            if final_direction.length_squared() > 0.0 {
+                let angle = final_direction.y.atan2(final_direction.x) - std::f32::consts::FRAC_PI_2;
+                transform.rotation = Quat::from_rotation_z(angle);
+            }
             
             let dist = transform.translation.distance(player_pos);
             if dist < closest_dist {
@@ -222,7 +290,7 @@ fn shooting_enemy_fire_system(
             if shoot_timer.timer.tick(time.delta()).just_finished() {
                 // Calculate direction to player
                 let direction = (player_transform.translation - enemy_transform.translation).truncate().normalize();
-                let velocity = direction * 150.0;
+                let velocity = direction * 250.0;
                 
                 // Spawn bullet
                 commands.spawn((

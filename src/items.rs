@@ -5,12 +5,17 @@ pub struct ItemsPlugin;
 
 impl Plugin for ItemsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (
+        app.insert_resource(ItemSpawnTimer(Timer::from_seconds(17.0, TimerMode::Repeating)))
+           .add_systems(Update, (
             health_item_movement,
             health_item_collection,
+            spawn_periodic_items,
         ).run_if(in_state(crate::resources::GameState::Running)));
     }
 }
+
+#[derive(Resource)]
+struct ItemSpawnTimer(Timer);
 
 #[derive(Component)]
 pub struct HealthItem {
@@ -84,5 +89,22 @@ fn health_item_collection(
                 commands.entity(item_entity).despawn_recursive();
             }
         }
+    }
+}
+
+fn spawn_periodic_items(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut timer: ResMut<ItemSpawnTimer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    if timer.0.tick(time.delta()).just_finished() {
+        let mut rng = rand::thread_rng();
+        let x = rng.gen_range(-300.0..300.0);
+        let y = 450.0;
+        
+        spawn_health_item(&mut commands, &mut meshes, &mut materials, Vec3::new(x, y, 9.0));
+        println!("Periodic health item spawned at ({}, {})", x, y);
     }
 }

@@ -12,6 +12,7 @@ impl Plugin for BossPlugin {
             boss_particle_movement,
             boss_collision_system,
             boss_health_bar_update,
+            boss_player_collision,
         ).run_if(in_state(crate::resources::GameState::Running)))
         .add_systems(OnEnter(crate::resources::GameState::BossWarning), setup_boss_warning)
         .add_systems(Update, boss_warning_countdown.run_if(in_state(crate::resources::GameState::BossWarning)))
@@ -45,6 +46,12 @@ pub struct BossHealthFill;
 
 #[derive(Component)]
 pub struct BossWarningText;
+
+#[derive(Component)]
+pub struct BossWarningBackground;
+
+#[derive(Component)]
+pub struct BossWarningBorder;
 
 #[derive(Resource)]
 pub struct BossWarningTimer {
@@ -146,7 +153,7 @@ fn boss_particle_system(
             let speed = 90.0;
             let mut rng = rand::thread_rng();
             
-            let pattern = rng.gen_range(0..8);
+            let pattern = rng.gen_range(0..15);
             
             match pattern {
                 0 => {
@@ -258,7 +265,7 @@ fn boss_particle_system(
                         ));
                     }
                 }
-                _ => {
+                7 => {
                     let minion_count = 4;
                     for i in 0..minion_count {
                         let angle = (i as f32 / minion_count as f32) * std::f32::consts::TAU + rng.gen_range(0.0..0.5);
@@ -270,6 +277,138 @@ fn boss_particle_system(
                             Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0),
                             BossParticle { velocity },
                         ));
+                    }
+                }
+                8 => {
+                    // Spiral pattern
+                    let spiral_arms = 3;
+                    let particles_per_arm = 8;
+                    let base_angle = time.elapsed_secs();
+                    
+                    for arm in 0..spiral_arms {
+                        for i in 0..particles_per_arm {
+                            let angle = base_angle + (arm as f32 * std::f32::consts::TAU / spiral_arms as f32) + (i as f32 * 0.2);
+                            let speed_mult = 0.7 + (i as f32 * 0.1);
+                            let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * speed_mult;
+                            
+                            commands.spawn((
+                                Mesh2d(meshes.add(Circle::new(8.0))),
+                                MeshMaterial2d(materials.add(Color::srgb(1.0, 0.5, 0.0))),
+                                Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0),
+                                BossParticle { velocity },
+                            ));
+                        }
+                    }
+                }
+                9 => {
+                    // Double helix pattern
+                    let points = 16;
+                    for i in 0..points {
+                        let angle1 = (i as f32 / points as f32) * std::f32::consts::TAU * 2.0;
+                        let angle2 = angle1 + std::f32::consts::PI;
+                        
+                        for angle in [angle1, angle2] {
+                            let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * 0.8;
+                            commands.spawn((
+                                Mesh2d(meshes.add(Circle::new(10.0))),
+                                MeshMaterial2d(materials.add(Color::srgb(0.0, 1.0, 0.5))),
+                                Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0),
+                                BossParticle { velocity },
+                            ));
+                        }
+                    }
+                }
+                10 => {
+                    // Pulsing ring pattern
+                    let rings = 3;
+                    for ring in 0..rings {
+                        let particles = 10 + (ring * 2);
+                        let speed_mult = 0.6 + (ring as f32 * 0.3);
+                        
+                        for i in 0..particles {
+                            let angle = (i as f32 / particles as f32) * std::f32::consts::TAU;
+                            let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * speed_mult;
+                            
+                            commands.spawn((
+                                Mesh2d(meshes.add(Circle::new(12.0))),
+                                MeshMaterial2d(materials.add(Color::srgb(0.5, 0.0, 1.0))),
+                                Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0),
+                                BossParticle { velocity },
+                            ));
+                        }
+                    }
+                }
+                11 => {
+                    // Corner shots (4 directions with spread)
+                    for i in 0..4 {
+                        let base_angle = (i as f32 * std::f32::consts::FRAC_PI_2) + std::f32::consts::FRAC_PI_4;
+                        for j in 0..4 {
+                            let spread = (j as f32 - 1.5) * 0.15;
+                            let angle = base_angle + spread;
+                            let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * 1.2;
+                            
+                            commands.spawn((
+                                Mesh2d(meshes.add(Triangle2d::default())),
+                                MeshMaterial2d(materials.add(Color::srgb(1.0, 0.0, 0.5))),
+                                Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0).with_scale(Vec3::splat(25.0)),
+                                BossParticle { velocity },
+                            ));
+                        }
+                    }
+                }
+                12 => {
+                    // Wave burst pattern
+                    let waves = 5;
+                    for wave in 0..waves {
+                        let delay = wave as f32 * 0.1;
+                        let points = 8;
+                        let base_rotate = time.elapsed_secs() + delay;
+                        
+                        for i in 0..points {
+                            let angle = (i as f32 / points as f32) * std::f32::consts::TAU + base_rotate;
+                            let speed_mult = 0.9 + (wave as f32 * 0.1);
+                            let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * speed_mult;
+                            
+                            commands.spawn((
+                                Mesh2d(meshes.add(Circle::new(9.0))),
+                                MeshMaterial2d(materials.add(Color::srgb(0.0, 0.7, 1.0))),
+                                Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0),
+                                BossParticle { velocity },
+                            ));
+                        }
+                    }
+                }
+                13 => {
+                    // Gravity well simulation (expanding then contracting pattern)
+                    let particle_count = 20;
+                    for i in 0..particle_count {
+                        let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+                        let speed_var = if i % 2 == 0 { 1.3 } else { 0.6 };
+                        let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * speed_var;
+                        
+                        commands.spawn((
+                            Mesh2d(meshes.add(Circle::new(11.0))),
+                            MeshMaterial2d(materials.add(Color::srgb(0.7, 0.0, 0.7))),
+                            Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0),
+                            BossParticle { velocity },
+                        ));
+                    }
+                }
+                _ => {
+                    // Cross diagonal pattern
+                    for i in 0..8 {
+                        let angle = (i as f32 / 8.0) * std::f32::consts::TAU;
+                        for j in 0..3 {
+                            let speed_mult = 0.8 + (j as f32 * 0.25);
+                            let velocity = Vec2::new(angle.cos(), angle.sin()) * speed * speed_mult;
+                            
+                            commands.spawn((
+                                Mesh2d(meshes.add(Rectangle::from_size(Vec2::splat(1.0)))),
+                                MeshMaterial2d(materials.add(Color::srgb(1.0, 1.0, 0.0))),
+                                Transform::from_xyz(transform.translation.x, transform.translation.y, 9.0).with_scale(Vec3::splat(15.0)),
+                                BossParticle { velocity },
+                            ));
+                        }
                     }
                 }
             }
@@ -436,31 +575,135 @@ pub fn boss_typing_system(
 
 fn setup_boss_warning(
     mut commands: Commands,
+    mut player_query: Query<&mut Transform, With<Player>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     commands.insert_resource(BossWarningTimer {
         timer: Timer::from_seconds(1.0, TimerMode::Repeating),
         count: 3,
     });
     
+    // Reposition player ship to bottom center to avoid boss collision
+    if let Ok(mut player_transform) = player_query.get_single_mut() {
+        player_transform.translation.x = 0.0;
+        player_transform.translation.y = -300.0;
+        player_transform.rotation = Quat::from_rotation_z(0.0); // Face upward
+    }
+    
+    // Animated pulsing background
     commands.spawn((
-        Text2d::new("BOSS WARNING"),
+        Mesh2d(meshes.add(Rectangle::from_size(Vec2::new(2000.0, 2000.0)))),
+        MeshMaterial2d(materials.add(Color::srgba(0.2, 0.0, 0.2, 0.7))),
+        Transform::from_xyz(0.0, 0.0, 1.0),
+        BossWarningBackground,
+    ));
+    
+    // Flashing warning border - Top
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::from_size(Vec2::new(2000.0, 20.0)))),
+        MeshMaterial2d(materials.add(Color::srgb(1.0, 0.0, 0.0))),
+        Transform::from_xyz(0.0, 400.0, 2.0),
+        BossWarningBorder,
+    ));
+    
+    // Flashing warning border - Bottom
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::from_size(Vec2::new(2000.0, 20.0)))),
+        MeshMaterial2d(materials.add(Color::srgb(1.0, 0.0, 0.0))),
+        Transform::from_xyz(0.0, -400.0, 2.0),
+        BossWarningBorder,
+    ));
+    
+    // Flashing warning border - Left
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::from_size(Vec2::new(20.0, 2000.0)))),
+        MeshMaterial2d(materials.add(Color::srgb(1.0, 0.0, 0.0))),
+        Transform::from_xyz(-600.0, 0.0, 2.0),
+        BossWarningBorder,
+    ));
+    
+    // Flashing warning border - Right
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::from_size(Vec2::new(20.0, 2000.0)))),
+        MeshMaterial2d(materials.add(Color::srgb(1.0, 0.0, 0.0))),
+        Transform::from_xyz(600.0, 0.0, 2.0),
+        BossWarningBorder,
+    ));
+    
+    // Warning symbols (triangles)
+    for i in 0..8 {
+        let angle = (i as f32 / 8.0) * std::f32::consts::TAU;
+        let radius = 250.0;
+        let x = angle.cos() * radius;
+        let y = angle.sin() * radius;
+        
+        commands.spawn((
+            Mesh2d(meshes.add(Triangle2d::default())),
+            MeshMaterial2d(materials.add(Color::srgb(1.0, 1.0, 0.0))),
+            Transform::from_xyz(x, y, 3.0)
+                .with_scale(Vec3::splat(25.0))
+                .with_rotation(Quat::from_rotation_z(angle + std::f32::consts::FRAC_PI_2)),
+            BossWarningText,
+        ));
+    }
+    
+    // Main warning text with shadow effect
+    commands.spawn((
+        Text2d::new("⚠️ BOSS WARNING ⚠️"),
         TextFont {
-            font_size: 80.0,
+            font_size: 90.0,
             ..default()
         },
-        TextColor(Color::srgb(1.0, 0.0, 0.0)),
-        Transform::from_xyz(0.0, 100.0, 10.0),
+        TextColor(Color::srgb(0.0, 0.0, 0.0)),
+        Transform::from_xyz(3.0, 153.0, 4.0),
         BossWarningText,
     ));
     
     commands.spawn((
+        Text2d::new("⚠️ BOSS WARNING ⚠️"),
+        TextFont {
+            font_size: 90.0,
+            ..default()
+        },
+        TextColor(Color::srgb(1.0, 0.0, 0.0)),
+        Transform::from_xyz(0.0, 150.0, 5.0),
+        BossWarningText,
+    ));
+    
+    // Subtitle
+    commands.spawn((
+        Text2d::new("PREPARE FOR BATTLE"),
+        TextFont {
+            font_size: 40.0,
+            ..default()
+        },
+        TextColor(Color::srgb(1.0, 1.0, 1.0)),
+        Transform::from_xyz(0.0, 70.0, 5.0),
+        BossWarningText,
+    ));
+    
+    // Countdown shadow
+    commands.spawn((
         Text2d::new("3"),
         TextFont {
-            font_size: 120.0,
+            font_size: 150.0,
+            ..default()
+        },
+        TextColor(Color::srgb(0.0, 0.0, 0.0)),
+        Transform::from_xyz(3.0, -53.0, 4.0),
+        BossWarningText,
+    ));
+    
+    // Countdown main text
+    commands.spawn((
+        Text2d::new("3"),
+        TextFont {
+            font_size: 150.0,
             ..default()
         },
         TextColor(Color::srgb(1.0, 1.0, 0.0)),
-        Transform::from_xyz(0.0, -50.0, 10.0),
+        Transform::from_xyz(0.0, -50.0, 5.0),
         BossWarningText,
     ));
 }
@@ -471,17 +714,36 @@ fn boss_warning_countdown(
     mut timer: ResMut<BossWarningTimer>,
     mut next_state: ResMut<NextState<crate::resources::GameState>>,
     mut text_query: Query<&mut Text2d, With<BossWarningText>>,
+    mut background_query: Query<&mut MeshMaterial2d<ColorMaterial>, With<BossWarningBackground>>,
+    mut border_query: Query<&mut MeshMaterial2d<ColorMaterial>, (With<BossWarningBorder>, Without<BossWarningBackground>)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     content_manager: Res<crate::resources::ContentManager>,
 ) {
+    // Pulsing background animation
+    if let Ok(background_material) = background_query.get_single_mut() {
+        let pulse = (time.elapsed_secs() * 3.0).sin() * 0.5 + 0.5;
+        let alpha = 0.5 + pulse * 0.3;
+        if let Some(material) = materials.get_mut(&background_material.0) {
+            material.color = Color::srgba(0.3, 0.0, 0.3, alpha);
+        }
+    }
+    
+    // Flashing border animation
+    for border_material in border_query.iter_mut() {
+        let flash = (time.elapsed_secs() * 5.0).sin() * 0.5 + 0.5;
+        if let Some(material) = materials.get_mut(&border_material.0) {
+            material.color = Color::srgb(1.0, flash * 0.3, 0.0);
+        }
+    }
+    
     if timer.timer.tick(time.delta()).just_finished() {
         if timer.count > 0 {
             timer.count -= 1;
             
             if timer.count > 0 {
                 for mut text in text_query.iter_mut() {
-                    if text.0.contains("⚠️") {
+                    if text.0.contains("⚠️") || text.0.contains("PREPARE") {
                         continue;
                     }
                     **text = timer.count.to_string();
@@ -496,10 +758,68 @@ fn boss_warning_countdown(
 
 fn cleanup_boss_warning(
     mut commands: Commands,
-    warning_query: Query<Entity, With<BossWarningText>>,
+    warning_text_query: Query<Entity, With<BossWarningText>>,
+    warning_bg_query: Query<Entity, With<BossWarningBackground>>,
+    warning_border_query: Query<Entity, With<BossWarningBorder>>,
 ) {
-    for entity in warning_query.iter() {
+    for entity in warning_text_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in warning_bg_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in warning_border_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
     commands.remove_resource::<BossWarningTimer>();
+}
+
+fn boss_player_collision(
+    mut commands: Commands,
+    mut player_query: Query<(&mut Transform, &mut crate::player::Ship), With<Player>>,
+    boss_query: Query<&Transform, (With<Boss>, Without<Player>)>,
+    mut next_state: ResMut<NextState<crate::resources::GameState>>,
+) {
+    if let Ok((mut player_transform, mut ship)) = player_query.get_single_mut() {
+        if !ship.invulnerability_timer.finished() {
+            return;
+        }
+        
+        if let Ok(boss_transform) = boss_query.get_single() {
+            let distance = player_transform.translation.distance(boss_transform.translation);
+            let boss_radius = 50.0; // Boss circle radius
+            let player_radius = 20.0; // Approximate player size
+            
+            if distance < (boss_radius + player_radius) {
+                // Calculate knockback direction (away from boss)
+                let knockback_dir = (player_transform.translation - boss_transform.translation).normalize();
+                let knockback_distance = 200.0;
+                
+                // Apply knockback
+                player_transform.translation += knockback_dir * knockback_distance;
+                
+                // Deal damage
+                ship.hp -= 1;
+                ship.combo = 0;
+                
+                // Spawn explosion effect at collision point
+                spawn_explosion(
+                    &mut commands,
+                    player_transform.translation,
+                    Color::srgb(0.8, 0.0, 0.8),
+                    15
+                );
+                
+                println!("Hit by Boss! Knocked back! HP: {}", ship.hp);
+                
+                if ship.hp <= 0 {
+                    println!("Game Over!");
+                    next_state.set(crate::resources::GameState::GameOver);
+                }
+                
+                // Apply invulnerability frames
+                ship.invulnerability_timer = Timer::from_seconds(0.5, TimerMode::Once);
+            }
+        }
+    }
 }
