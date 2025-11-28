@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use rand::Rng;
-use crate::resources::{ContentManager, Wave};
+use crate::resources::{ContentManager, Wave, MapBounds};
 
 pub struct EnemyPlugin;
 
@@ -9,6 +9,7 @@ impl Plugin for EnemyPlugin {
         app.insert_resource(SpawnTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
            .init_resource::<ContentManager>()
            .init_resource::<Wave>()
+           .init_resource::<MapBounds>()
            .add_systems(Update, (
                spawn_enemies,
                enemy_movement,

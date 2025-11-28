@@ -103,7 +103,7 @@ impl Wave {
         } else {
             primes.last().unwrap() + (self.current - primes.len()) * 2
         }
-    //     1
+        // 1
     }
 }
 
@@ -225,5 +225,24 @@ impl ContentManager {
     pub fn next_paragraph(&mut self) {
         self.current_index = (self.current_index + 1) % self.paragraphs.len();
         println!("Switched to paragraph {}", self.current_index + 1);
+    }
+}
+
+#[derive(Resource)]
+pub struct MapBounds {
+    pub min_x: f32,
+    pub max_x: f32,
+    pub min_y: f32,
+    pub max_y: f32,
+}
+
+impl Default for MapBounds {
+    fn default() -> Self {
+        Self {
+            min_x: -600.0,
+            max_x: 600.0,
+            min_y: -360.0,
+            max_y: 360.0,
+        }
     }
 }

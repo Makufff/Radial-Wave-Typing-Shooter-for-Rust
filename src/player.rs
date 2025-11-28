@@ -57,6 +57,7 @@ fn player_movement(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
     mut query: Query<(&mut Transform, &mut Ship), With<Player>>,
+    map_bounds: Res<crate::resources::MapBounds>,
 ) {
     let (mut transform, ship) = query.single_mut();
     let mut direction = Vec3::ZERO;
@@ -86,6 +87,11 @@ fn player_movement(
     } else {
         transform.scale = Vec3::splat(30.0);
     }
+    
+    // Clamp position to map bounds
+    transform.translation.x = transform.translation.x.clamp(map_bounds.min_x, map_bounds.max_x);
+    transform.translation.y = transform.translation.y.clamp(map_bounds.min_y, map_bounds.max_y);
+    
     transform.translation.z = 10.0;
 }
 
